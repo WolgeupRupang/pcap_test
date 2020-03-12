@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <pcap.h>
 #include <stdint.h>
-#include <netinet/in.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
