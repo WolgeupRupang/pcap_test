@@ -19,7 +19,7 @@ void usage() {
 }
 
 // function that called by pcap_loop()
-void callback(unsigned char* unused, const struct pcap_pkthdr *pkthdr, const u_char *packet)
+void callback(unsigned char* useless, const struct pcap_pkthdr *pkthdr, const u_char *packet) //why prameter useless and pkthdr????
 {
     unsigned short ether_type;
 
