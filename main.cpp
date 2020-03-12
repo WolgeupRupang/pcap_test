@@ -19,10 +19,10 @@
 #define PROMISCUOUS 1
 #define NONPROMISCUOUS 0
 
-// IP 헤더 구조체
+// IP header structure
 struct ip *iph;
 
-// TCP 헤더 구조체
+// TCP header structure
 struct tcphdr *tcph;
 
 // Ethernet header structure
@@ -33,100 +33,56 @@ void usage() {
   printf("sample: pcap_test wlan0\n");
 }
 
-
-// 패킷을 받아들일경우 이 함수를 호출한다.
-// packet 가 받아들인 패킷이다.
-void callback(u_char *useless, const struct pcap_pkthdr *pkthdr,
-                const u_char *packet)
+void callback(unsigned char* unused, const struct pcap_pkthdr *pkthdr, const u_char *packet) // call this function IF a packet captured
 {
-    static int count = 1;
-    struct ether_header *ep;
-    unsigned short ether_type;
-    int chcnt =0;
-    int length=pkthdr->len;
+    printf("-------------Packet Capture-------------\n");
 
-    // 이더넷 헤더를 가져온다.
-    ep = (struct ether_header *)packet;
+    // get ethernet header
+    ethhdr = (struct ether_header *)packet;
 
-    // IP 헤더를 가져오기 위해서
-    // 이더넷 헤더 크기만큼 offset 한다.
-    packet += sizeof(struct ether_header);
 
-    // 프로토콜 타입을 알아낸다.
     ether_type = ntohs(ep->ether_type);
 
-    // 만약 IP 패킷이라면
-    if (ether_type == ETHERTYPE_IP)
-    {
-        // IP 헤더에서 데이타 정보를 출력한다.
+    if (ether_type == ETHERTYPE_IP) {
+
+        //print mac Addr
+        printf("d_mac = %02X:%02X:%02X:%02X:%02X:%02X\n", ethhdr->ether_dhost[0], ethhdr->ether_dhost[1], ethhdr->ether_dhost[2], ethhdr->ether_dhost[3], ethhdr->ether_dhost[4], ethhdr->ether_dhost[5]);
+        printf("s_mac = %02X:%02X:%02X:%02X:%02X:%02X\n", ethhdr->ether_shost[0], ethhdr->ether_shost[1], ethhdr->ether_shost[2], ethhdr->ether_shost[3], ethhdr->ether_shost[4], ethhdr->ether_shost[5]);
+
+        // offset ethernet header length to IP header
+        packet += sizeof(struct ether_header);
         iph = (struct ip *)packet;
-        printf("Src Address : %s\n", inet_ntoa(iph->ip_src));
-        printf("Dst Address : %s\n", inet_ntoa(iph->ip_dst));
 
-        // 만약 TCP 데이타 라면
-        // TCP 정보를 출력한다.
-        if (iph->ip_p == IPPROTO_TCP)
-        {
-            tcph = (struct tcphdr *)(packet + iph->ip_hl * 4);
-            printf("Src Port : %d\n" , ntohs(tcph->source));
-            printf("Dst Port : %d\n" , ntohs(tcph->dest));
-        }
+        // print IP Addr
+        printf("s_ip = %s\n", inet_ntoa(iph->ip_src));
+        printf("d_ip = %s\n", inet_ntoa(iph->ip_dst));
 
-        // Packet 데이타 를 출력한다.
-        // IP 헤더 부터 출력한다.
-        while(length--)
-        {
-            printf("%02x", *(packet++));
-            if ((++chcnt % 16) == 0)
-                printf("\n");
-        }
+        // print TCP Addr
+        tcph = (struct tcphdr *)(packet + iph->ip_hl * 4);
+        printf("s_port : %d\n" , ntohs(tcph->source));
+        printf("d_port : %d\n" , ntohs(tcph->dest));
     }
-    // IP 패킷이 아니라면
-    else
-    {
-        printf("NONE IP 패킷\n");
-    }
-    printf("\n\n");
+
 }
 
 
 
-int main(int argc, char* argv[]) { // starting command: /.pcap_test eth0 //
+int main(int argc, char* argv[]) // starting command: /.pcap_test eth0
+{
   if (argc != 2) {
     usage();
     return -1;
   }
 
-  char* dev = argv[1]; //2nd input variable = address (eth0) //
+  char* dev = argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
   if (handle == NULL) {
     fprintf(stderr, "couldn't open device %s: %s\n", dev, errbuf);
     return -1;
-  } //return handle//
+  } //return handle
 
-  while (true) {
-    struct pcap_pkthdr* header;
-    const u_char* packet;
-    int res = pcap_next_ex(handle, &header, &packet); //function that capture the next packet-re code it!//
-    if (res == 0) continue;
-    if (res == -1 || res == -2) break;
-    printf("%u bytes captured\n", header->caplen);
-  }
-
-   pcap_loop(handle, 0, callback, NULL);
-/*
-output ex:
-
-printf("-------------Packet Capture-------------")
-printf("d_mac = "); //struct ethhdr//
-printf("s_mac = ");
-printf("s_ip = "); //struct iphdr//
-printf("d_ip = ");
-printf("s_port = "); //struct tcphdr//
-printf("d_port = ");
-
-*/
+  pcap_loop(handle, 0, callback, NULL); //run function callback IF packet captured
 
   pcap_close(handle);
   return 0;
